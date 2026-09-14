@@ -1,4 +1,6 @@
-from app.agent import get_kyc_requirements
+from types import SimpleNamespace
+
+from app.agent import get_kyc_requirements, set_customer_type
 
 
 def test_individual_kyc_requirements():
@@ -37,3 +39,34 @@ def test_customer_type_is_normalized():
 
     assert result["status"] == "success"
     assert result["customer_type"] == "individual"
+
+
+def test_set_customer_type_updates_state():
+    tool_context = SimpleNamespace(state={})
+
+    result = set_customer_type(
+        customer_type="business",
+        tool_context=tool_context,
+    )
+
+    assert result == {
+        "status": "success",
+        "customer_type": "business",
+    }
+    assert tool_context.state["customer_type"] == "business"
+
+
+def test_set_customer_type_rejects_unsupported_type():
+    tool_context = SimpleNamespace(state={})
+
+    result = set_customer_type(
+        customer_type="nonprofit",
+        tool_context=tool_context,
+    )
+
+    assert result == {
+        "status": "unsupported_customer_type",
+        "customer_type": "nonprofit",
+        "supported_types": ["business", "individual"],
+    }
+    assert "customer_type" not in tool_context.state
